@@ -102,6 +102,8 @@ export function initLiquidBalance(grid) {
     const button=card.querySelector('.liquid-vessel'), diagram=card.querySelector('.archive-diagram');
     return {card,button,diagram,index,label:button.getAttribute('aria-label'),water:button.querySelector('canvas'),dropsCanvas:diagram.querySelector('.liquid-drops'),hint:card.querySelector('.pour-hint'),level:reduced.matches?options.baseLevel:0,drops:[],wave:new Float64Array(40),velocity:new Float64Array(40),visible:false,started:reduced.matches,done:reduced.matches,age:0,emitted:0,delay:0,w:1,h:1,dw:1,dh:1,shake:0,lastInput:-Infinity,hintUntil:0};
   });
+  // Tilting never pushes a vessel below its resting bottom edge (keeps captions underneath clear).
+  const lift=p=>{const a=Math.abs(theta)*Math.PI/180;return Math.max(0,p.w/2*Math.sin(a)+p.h/2*Math.cos(a)-p.h/2);};
   let frame=0, timer=0, previous=0, theta=0, angularVelocity=0, recovery=1, clock=0;
   const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
   const pending=p=>p.drops.reduce((n,d)=>n+d.volume,0);
@@ -138,7 +140,7 @@ export function initLiquidBalance(grid) {
   function draw() {
     grid.style.setProperty('--beam-angle',(-theta)+'deg');grid.dataset.theta=theta.toFixed(4);
     for(const p of pans) {
-      const dy=(p.index===0?1:-1)*theta*1.6;
+      const dy=-lift(p);
       const shake=p.shake>0&&!reduced.matches?Math.sin(p.shake*65)*3:0;
       p.button.style.transform=`translate(${shake}px,${dy}px) rotate(${-theta}deg)`;
       const ctx=p.water.getContext('2d');ctx.clearRect(0,0,p.w,p.h);
@@ -193,7 +195,7 @@ export function initLiquidBalance(grid) {
         while(p.emitted<wanted){emit(p,options.baseLevel/40,1);p.emitted++;}
       }
       const rot=-theta*Math.PI/180,cos=Math.cos(rot),sin=Math.sin(rot);
-      const cx=p.button.offsetLeft+p.w/2,cy=p.button.offsetTop+20+p.h/2+(p.index===0?1:-1)*theta*1.6;
+      const cx=p.button.offsetLeft+p.w/2,cy=p.button.offsetTop+20+p.h/2-lift(p);
       p.drops=p.drops.filter(d=>{
         d.v+=800*dt;d.y+=d.v*dt;
         const dx=d.x*p.dw-cx,dy=d.y-cy;
